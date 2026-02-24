@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RFP</title>
+    <style>
+        :root {
+            --bg: #09090b;
+            --surface: #18181b;
+            --border: #27272a;
+            --text: #fafafa;
+            --text-muted: #71717a;
+            --accent: #818cf8;
+            --accent-hover: #6366f1;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            /* Subtle ambient glow */
+            background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, transparent 60%);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        header {
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.05em;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #fff, #a1a1aa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Form Styling */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        textarea, input {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 14px 16px;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        input {
+            letter-spacing: 0.05em;
+        }
+
+        textarea:focus, input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
+        }
+
+        button {
+            width: 100%;
+            background-color: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.1s;
+        }
+
+        button:hover { background-color: var(--accent-hover); }
+        button:active { transform: scale(0.98); }
+
+        /* Minimal Output */
+        .output-area {
+            margin-top: 0.5rem;
+        }
+        
+        .output-area textarea {
+            background: transparent;
+            border-style: dashed;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Toast Notification */
+        #toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #fff;
+            color: #000;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        #toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>RFP</h1>
+            <p>Rohama's First Project</p>
+        </header>
+
+        <main>
+            <div class="input-group">
+                <textarea id="inputText" placeholder="Enter text to encrypt..." rows="3"></textarea>
+                <input type="text" id="secretKey" placeholder="Secret Key (16 chars)" maxlength="16">
+                <button onclick="encryptText()">Encrypt</button>
+            </div>
+
+            <div class="output-area">
+                <textarea id="outputText" placeholder="Encrypted output..." readonly rows="2"></textarea>
+            </div>
+        </main>
+    </div>
+
+    <div id="toast">Copied to clipboard</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script>
+        // UX: Allow Enter key to navigate fields
+        document.getElementById('inputText').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById('secretKey').focus();
+            }
+        });
+
+        document.getElementById('secretKey').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                encryptText();
+            }
+        });
+
+        // Toast Notification System
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        function encryptText() {
+            const inputText = document.getElementById('inputText').value;
+            const secretKey = document.getElementById('secretKey').value;
+
+            if (!inputText) return showToast("Please enter text");
+            
+            if (secretKey.length !== 16) {
+                showToast("Key must be exactly 16 characters");
+                return;
+            }
+
+            try {
+                const encrypted = CryptoJS.AES.encrypt(inputText, CryptoJS.enc.Utf8.parse(secretKey), {
+                    mode: CryptoJS.mode.ECB,
+                    padding: CryptoJS.pad.Pkcs7
+                });
+
+                const encryptedBase64 = encrypted.ciphertext.toString(CryptoJS.enc.Base64);
+                document.getElementById('outputText').value = encryptedBase64;
+
+                // Copy to clipboard
+                navigator.clipboard.writeText(encryptedBase64).then(() => {
+                    showToast("Copied to clipboard ✓");
+                }).catch(() => {
+                    showToast("Encryption complete");
+                });
+            } catch (err) {
+                showToast("Encryption error");
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+</html>
